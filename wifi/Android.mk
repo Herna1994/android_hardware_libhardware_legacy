@@ -46,4 +46,8 @@ ifeq ($(BOARD_HAVE_SAMSUNG_WIFI),true)
 LOCAL_CFLAGS += -DSAMSUNG_WIFI
 endif
 
-LOCAL_SHARED_LIBRARIES += libnetutils
+ifeq ($(BOARD_USE_HUAWEI_BCM_WIFI),true)
+    LOCAL_CFLAGS += -DHUAWEI_BCM_WIFI
+endif
+
+LOCAL_SHARED_LIBRARIES += libnetutils libhwrpc
