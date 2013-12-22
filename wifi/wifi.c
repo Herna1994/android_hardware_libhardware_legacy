@@ -143,11 +143,61 @@ static unsigned char dummy_key[21] = { 0x02, 0x11, 0xbe, 0x33, 0x43, 0x35,
                                        0x1c, 0xd3, 0xee, 0xff, 0xf1, 0xe2,
                                        0xf3, 0xf4, 0xf5 };
 
+#ifdef HUAWEI_BCM_WIFI
+extern void huawei_oem_rapi_streaming_function(int n, int p1, int p2, int p3, int *v1, int *v2, int *v3);
+void sertomac(char *sernum, char *mac_addr);
+#endif
 /* Is either SUPPLICANT_NAME or P2P_SUPPLICANT_NAME */
 static char supplicant_name[PROPERTY_VALUE_MAX];
 /* Is either SUPP_PROP_NAME or P2P_PROP_NAME */
 static char supplicant_prop_name[PROPERTY_KEY_MAX];
 
+#ifdef HUAWEI_BCM_WIFI
+void getmac(char *mac_param)
+{
+    char x[8];
+    int  y;
+	char sernum[PROPERTY_VALUE_MAX];
+	char mac_addr[PROPERTY_VALUE_MAX];
+		property_get("ro.serialno", sernum, NULL);
+	if(sernum != NULL){
+		sertomac(sernum,mac_addr);
+		sprintf(mac_param,"mac_param=%s %s", mac_addr, DRIVER_MODULE_ARG);
+	}else{
+		memset(x,0,8);
+		y=0;
+		huawei_oem_rapi_streaming_function(3,0,0,0,0,&y,x);
+		ALOGV("huawei_oem_rapi_streaming_function %p %x %x",x,x[0],y);
+		sprintf(mac_param,"mac_param=%02X:%02X:%02X:%02X:%02X:%02X %s",x[5],x[4],x[3],x[2],x[1],x[0],DRIVER_MODULE_ARG);
+	}
+    ALOGI("Got MAC Address: %s ",mac_param);
+}
+
+void sertomac(char *sernum, char *mac_addr)
+{
+	int len,i;
+
+	len = strlen(sernum);
+
+	sernum[len-1]++;
+
+	for(i=1;i<len;i++){
+		if(sernum[len-i] > 'F'){
+			sernum[len-i] = '0';
+			sernum[len-i-1]++;
+		}
+	}	
+	ALOGV("result is %s", sernum);	
+    sprintf(mac_addr,"%c%c:%c%c:%c%c:%c%c:%c%c:%c%c", \
+	sernum[0], sernum[1], \
+	sernum[2], sernum[3], \
+	sernum[4], sernum[5], \
+	sernum[6], sernum[7], \
+	sernum[8], sernum[9], \
+	sernum[10], sernum[11]);	
+	ALOGV("MAC Address is %s", mac_addr);
+}
+#endif
 
 #ifdef SAMSUNG_WIFI
 char* get_samsung_wifi_type()
@@ -298,7 +348,13 @@ int wifi_load_driver()
     usleep(200000);
 #endif
 
+#ifdef HUAWEI_BCM_WIFI
+    char mac_param[64];
+		getmac(mac_param);
+    if (insmod(DRIVER_MODULE_PATH, mac_param) < 0) {
+#else
     if (insmod(DRIVER_MODULE_PATH, DRIVER_MODULE_ARG) < 0) {
+#endif
 #endif
 
 #ifdef WIFI_EXT_MODULE_NAME
